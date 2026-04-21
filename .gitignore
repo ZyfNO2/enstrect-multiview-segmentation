@@ -69,6 +69,10 @@ pytorch3d/
 .ipynb_checkpoints/
 *.ipynb
 
+# KITTI Dataset (large files, don't commit)
+data/kitti/data_odometry_color/
+KITTI/
+
 # OS
 .DS_Store
 Thumbs.db
