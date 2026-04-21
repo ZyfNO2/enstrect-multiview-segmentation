@@ -1,29 +1,52 @@
-# ENSTRECT 多视图结构损伤分割
+# ENSTRECT 多视图结构损伤分割 + LLM+RAG 智能报告
 
-> 基于 [ENSTRECT](https://github.com/ben-z-original/enstrect) 的多视图结构表面损伤检测演示项目
+> 基于 [ENSTRECT](https://github.com/ben-z-original/enstrect) 的多视图结构表面损伤检测与 LLM 智能报告生成系统
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.5-orange)](https://pytorch.org/)
+[![Qwen2.5-VL](https://img.shields.io/badge/Qwen2.5--VL-API-purple)](https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-qianwen-vl/)
 [![License](https://img.shields.io/badge/License-MIT-green)]()
+
+---
+
+## 🆕 最新功能：LLM+RAG 损伤智能识别与报告生成
+
+本项目现已集成 **Qwen2.5-VL 多模态大模型** 和 **RAG 检索增强生成**，实现零标注成本的智能损伤评估报告！
+
+### 核心亮点
+
+- **🤖 多模态 AI**：基于 Qwen2.5-VL-7B/72B，支持图像理解 + 自然语言生成
+- **📚 RAG 知识增强**：集成 GB 50204、JTG/T H21 等混凝土/桥梁评定规范
+- **📝 智能报告**：自动生成 JSON + Markdown 双格式结构化报告
+- **🎯 零标注成本**：无需标注数据，纯 Prompt Engineering + RAG
+- **📊 训练数据收集**：自动保存推理过程，为 LoRA 微调准备数据
+- **⚡ API 模式**：阿里云百炼云端调用，无需本地下载 15GB 模型
+
+### 报告示例
+
+```json
+{
+  "damage_type": "crack",
+  "severity_level": 3,
+  "description": "图像显示一条横向裂缝，位于构件中部，裂缝宽度约0.2mm，长度约15cm",
+  "geometry_summary": "损伤像素数7343px，估计面积73.43mm²，占图像比例0.02%",
+  "regulation_reference": "依据JTG/T H21-2011第3.2.1条，裂缝宽度0.15mm<δ≤0.35mm，评定标度为3级",
+  "repair_recommendation": "建议采用表面封闭法处理，使用环氧树脂注浆材料填充裂缝",
+  "confidence": 0.85
+}
+```
 
 ---
 
 ## 项目简介
 
-本项目是基于 **ENSTRECT** (Engineering Structures Texture and Crack Tracker) 的多视图结构损伤分割演示。ENSTRECT 是一个用于结构表面损伤检测的 2.5D 深度学习框架，支持裂缝、剥落、腐蚀等多种损伤类型的检测。
+本项目是基于 **ENSTRECT** (Engineering Structures Texture and Crack Tracker) 的多视图结构损伤检测与智能报告系统。支持：
 
-### 核心特性
+1. **2D 语义分割** - 基于 nnU-Net-S2DS 的像素级损伤检测
+2. **3D 点云融合** - 多视角投影与概率融合（可选）
+3. **🆕 LLM 智能报告** - Qwen2.5-VL + RAG 规范条文引用
 
-- 基于 **nnU-Net-S2DS** 的 2D 语义分割模型
-- 支持 7 种损伤类别：裂缝、剥落、腐蚀、泛白、植被、控制点
-- **🆕 图像质量检测与数据清洗** - 自动过滤运动模糊、失焦等低质量图像
-- 多视图图像批量处理
-- 自动统计损伤像素分布
-- 可视化分割结果与叠加显示
-
----
-
-## 损伤类别说明
+### 支持的损伤类别
 
 | 类别 | 颜色 | 说明 | 权重 |
 |------|------|------|------|
@@ -37,386 +60,315 @@
 
 ---
 
-## 环境要求
+## 🚀 快速开始：LLM+RAG 智能报告
 
-### 硬件要求
-- **GPU**: NVIDIA GPU (推荐 CUDA 12.4+)
-- **显存**: 至少 8GB
-- **内存**: 至少 16GB
+### 1. 获取阿里云百炼 API Key
 
-### 软件环境
-```
-Python >= 3.10
-PyTorch >= 2.5.0
-CUDA >= 12.4
-```
-
----
-
-## 快速开始
-
-### 1. 克隆仓库
+1. 访问 [阿里云百炼控制台](https://bailian.console.aliyun.com/)
+2. 创建 API Key：[获取文档](https://help.aliyun.com/zh/model-studio/get-api-key)
+3. 保存 API Key 到 `.env` 文件：
 
 ```bash
-git clone https://github.com/ZyfNO2/enstrect-multiview-segmentation.git
-cd enstrect-multiview-segmentation
+# 在项目根目录创建 .env 文件
+echo "DASHSCOPE_API_KEY=sk-your-api-key" > .env
 ```
 
 ### 2. 安装依赖
 
 ```bash
-# 创建conda环境
-conda create -n enstrect python=3.10
-conda activate enstrect
-
-# 安装PyTorch (CUDA 12.4)
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
-
-# 安装其他依赖
-pip install -r requirements.txt
+pip install transformers qwen-vl-utils chromadb sentence-transformers pdfplumber
 ```
 
-### 3. 下载ENSTRECT核心库
+### 3. 构建 RAG 知识库
 
 ```bash
-# 克隆ENSTRECT仓库到子目录
-git clone https://github.com/ben-z-original/enstrect.git enstrect_lib
+python -m llm_rag.rag.build --pdf-dir data/standards/ --db-path data/chromadb/
 ```
 
-### 4. 下载测试数据
+### 4. 运行智能报告生成
 
 ```bash
-# 下载官方测试数据 (Bridge B & G)
-cd enstrect_lib
-python -m enstrect.datasets.download
+# 基础用法（自动加载 .env 中的 API Key）
+python run_llm_damage_report_api.py --images-dir path/to/images --output-dir output/
+
+# 带 RAG 规范检索
+python run_llm_damage_report_api.py --images-dir path/to/images --enable-rag --top-k 3
+
+# 指定 API Key 和模型
+python run_llm_damage_report_api.py --images-dir path/to/images --api-key sk-xxxx --model-name qwen2.5-vl-72b-instruct
 ```
-
-数据将自动下载到 `enstrect_lib/src/enstrect/assets/` 目录
-
-### 5. 运行分割
-
-```bash
-# 运行多视图分割
-python run_multiview_segmentation.py
-```
-
-结果将保存到 `output/` 目录
 
 ---
 
-## 项目结构
+## 📖 完整使用指南
+
+### 方案一：纯 API 模式（推荐，无需 GPU）
+
+使用阿里云百炼云端 Qwen2.5-VL API，无需本地下载模型：
+
+```bash
+# 单张图像测试
+python run_llm_damage_report_api.py \
+    --images-dir enstrect/src/enstrect/assets/bridge_b/segment_test/views \
+    --output-dir output_api \
+    --max-images 1 \
+    --enable-rag
+
+# 批量处理
+python run_llm_damage_report_api.py \
+    --images-dir path/to/your/images \
+    --output-dir output_batch \
+    --enable-rag \
+    --top-k 3
+```
+
+**参数说明：**
+- `--images-dir`: 输入图像目录
+- `--output-dir`: 输出目录
+- `--api-key`: API Key（默认从 `.env` 或环境变量读取）
+- `--model-name`: 模型名称（`qwen2.5-vl-7b-instruct` 或 `qwen2.5-vl-72b-instruct`）
+- `--enable-rag`: 启用 RAG 规范检索
+- `--top-k`: RAG 检索返回条数（默认 3）
+- `--max-images`: 最大处理图像数（默认全部）
+- `--pixel-to-mm`: 像素到毫米换算系数（默认 0.1）
+
+### 方案二：本地模型模式（需要 GPU）
+
+如需本地部署 Qwen2.5-VL（需要约 16GB 显存）：
+
+```bash
+# 本地模型版本
+python run_llm_damage_report.py \
+    --images-dir path/to/images \
+    --output-dir output_local \
+    --load-in-4bit  # 4-bit 量化降低显存
+```
+
+---
+
+## 🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      LLM+RAG 损伤智能报告系统                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  输入图像 → nnU-Net分割 → ROI裁剪 → RAG检索 → Qwen2.5-VL推理 → 结构化报告  │
+│                              ↑                                          │
+│                    GB 50204 / JTG/T H21 规范知识库                        │
+│                              ↓                                          │
+│                    自动收集训练数据（LoRA微调准备）                        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 核心模块
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **RAG 知识库** | `llm_rag/rag/` | PDF 解析、向量存储、语义检索 |
+| **VLM 推理** | `llm_rag/vlm/` | Qwen2.5-VL API/本地调用、输出解析 |
+| **Prompt 构建** | `llm_rag/prompt/` | ROI 裁剪、多模态 Prompt 模板 |
+| **报告渲染** | `llm_rag/report/` | JSON/Markdown 双格式输出 |
+| **数据收集** | `llm_rag/utils/` | LoRA 训练数据自动收集 |
+
+---
+
+## 📁 项目结构
 
 ```
 .
 ├── README.md                              # 项目说明
 ├── requirements.txt                       # Python依赖
-├── run_multiview_segmentation.py          # 主运行脚本（基础版）
-├── run_multiview_segmentation_with_filter.py  # 主运行脚本（带数据清洗）
+├── .env                                   # API Key 配置文件（已加入 .gitignore）
+│
+├── llm_rag/                               # 🆕 LLM+RAG 核心模块
+│   ├── rag/                               # RAG 知识库
+│   │   ├── pdf_parser.py                  # PDF 规范解析
+│   │   ├── vector_store.py                # ChromaDB 向量存储
+│   │   ├── retriever.py                   # 语义检索接口
+│   │   └── build.py                       # 知识库构建 CLI
+│   ├── vlm/                               # 视觉语言模型
+│   │   ├── inference.py                   # 本地模型推理
+│   │   ├── inference_api.py               # API 调用封装
+│   │   └── output_parser.py               # JSON 输出解析
+│   ├── prompt/                            # Prompt 构建
+│   │   ├── roi_cropper.py                 # ROI 区域裁剪
+│   │   └── builder.py                     # 多模态 Prompt 模板
+│   ├── report/                            # 报告渲染
+│   │   └── renderer.py                    # JSON + Markdown 输出
+│   └── utils/                             # 工具模块
+│       └── data_collector.py              # LoRA 训练数据收集
+│
+├── run_llm_damage_report_api.py           # 🆕 API 版主脚本（推荐）
+├── run_llm_damage_report.py               # 🆕 本地模型版主脚本
+├── data/                                  # 数据目录
+│   ├── standards/                         # 规范 PDF 文档
+│   │   └── sample_regulations.json        # 示例规范条文
+│   └── chromadb/                          # RAG 向量数据库
+│
+├── run_multiview_segmentation.py          # 基础分割脚本
+├── run_multiview_segmentation_with_filter.py  # 带质量过滤的分割
 ├── image_quality_filter.py                # 图像质量检测模块
-├── enstrect_lib/                          # ENSTRECT核心库
-│   └── src/enstrect/
-│       ├── assets/                        # 测试数据
-│       │   ├── bridge_b/                  # Bridge B 数据集
-│       │   └── bridge_g/                  # Bridge G 数据集
-│       └── segmentation/                  # 分割模型
-└── output/                                # 输出目录
-    ├── segmentation_*.png                 # 分割结果
-    ├── multiview_summary.png              # 汇总图
-    └── quality_report.txt                 # 质量分析报告（带过滤版）
+└── enstrect/                              # ENSTRECT 核心库（子模块）
+    └── src/enstrect/
+        ├── assets/                        # 测试数据
+        └── segmentation/                  # 分割模型
 ```
 
 ---
 
-## 使用说明
+## 🎯 使用示例
 
-### 基本用法
-
-#### 1. 基础分割（无过滤）
-
-```python
-from run_multiview_segmentation import process_multiview
-
-# 处理指定目录的多视图图像
-results = process_multiview(
-    images_dir="path/to/your/images",
-    output_dir="path/to/output",
-    max_images=10
-)
-```
-
-#### 2. 带数据清洗的分割（推荐）⭐
-
-```python
-from run_multiview_segmentation_with_filter import process_multiview_with_filter
-
-# 自动过滤模糊图像后进行分割
-results = process_multiview_with_filter(
-    images_dir="path/to/your/images",
-    output_dir="path/to/output",
-    max_images=10,
-    enable_quality_filter=True,      # 启用质量过滤
-    blur_threshold=100.0,            # 模糊检测阈值
-    min_quality_score=0.3,           # 最低质量评分
-    quality_method='laplacian',      # 检测方法
-    max_blurry_ratio=0.5             # 最大允许模糊比例
-)
-```
-
-或者直接运行：
-```bash
-# 带数据清洗的版本（推荐用于实际数据）
-python run_multiview_segmentation_with_filter.py
-```
-
-### 自定义参数
-
-在 `run_multiview_segmentation.py` 中修改以下参数：
-
-```python
-# 输入图像目录
-images_dir = r"G:\Zed\ENSTRECTtest\enstrect\src\enstrect\assets\bridge_b\segment_test\views"
-
-# 输出目录
-output_dir = r"G:\Zed\ENSTRECTtest\output"
-
-# 处理图像数量
-max_images = 5  # 设置为None处理全部
-```
-
----
-
-## 🆕 图像质量检测与数据清洗
-
-本项目提供了强大的图像质量检测功能，可在分割前自动过滤运动模糊、失焦等低质量图像，提高分割精度。
-
-### 功能特点
-
-- **多种检测算法**：拉普拉斯方差、Sobel梯度、FFT频域分析、综合评估
-- **可配置阈值**：根据实际需求调整模糊判定标准
-- **批量处理**：自动检测并分类大量图像
-- **质量报告**：生成详细的图像质量分析报告
-
-### 检测方法对比
-
-| 方法 | 原理 | 适用场景 | 计算速度 |
-|------|------|----------|----------|
-| **Laplacian** | 拉普拉斯算子方差 | 通用运动模糊检测 | ⚡ 快 |
-| **Sobel** | 边缘梯度强度 | 边缘清晰度评估 | ⚡ 快 |
-| **FFT** | 频域高频能量 | 失焦/运动模糊 | 🐢 较慢 |
-| **Combined** | 多方法综合 | 高精度要求 | 🐢 较慢 |
-
-### 使用方法
-
-#### 单独使用质量检测
-
-```python
-from image_quality_filter import filter_blurry_images
-
-# 批量检测并分类图像
-results = filter_blurry_images(
-    images_dir="path/to/images",
-    output_dir="path/to/output",      # 可选，自动分类保存
-    blur_threshold=100.0,             # 模糊阈值
-    method='laplacian',               # 检测方法
-    visualize=True                    # 生成可视化报告
-)
-
-# 结果包含清晰和模糊图像列表
-sharp_images = results['sharp']
-blurry_images = results['blurry']
-```
-
-#### 集成到分割流程
-
-```python
-from run_multiview_segmentation_with_filter import process_multiview_with_filter
-
-results = process_multiview_with_filter(
-    images_dir="path/to/images",
-    output_dir="path/to/output",
-    enable_quality_filter=True,
-    blur_threshold=100.0,             # 拉普拉斯方差阈值
-    min_quality_score=0.3,            # 最低质量评分(0-1)
-    quality_method='laplacian',       # 检测方法
-    max_blurry_ratio=0.5              # 最大允许模糊比例
-)
-```
-
-### 参数调优指南
-
-#### blur_threshold 设置建议
-
-| 场景 | 推荐阈值 | 说明 |
-|------|----------|------|
-| 严格过滤 | 150-200 | 只保留非常清晰的图像 |
-| 平衡模式 | 80-120 | 默认推荐值 |
-| 宽松模式 | 50-80 | 尽可能保留更多图像 |
-
-#### 不同分辨率下的阈值参考
-
-- **4K图像** (3840×2160)：阈值 150-250
-- **1080p图像** (1920×1080)：阈值 80-150
-- **512×512**：阈值 30-80
-
-### 质量报告输出
-
-运行带过滤的版本后，会生成以下额外输出：
-
-```
-output_filtered/
-├── segmentation_*.png           # 分割结果
-├── multiview_summary.png        # 汇总图
-├── quality_analysis.png         # 质量分布可视化
-└── quality_report.txt           # 详细质量报告
-```
-
-**quality_report.txt 示例**：
-```
-============================================================
-图像质量分析报告
-============================================================
-
-总处理图像数: 8
-
-质量评分统计:
-  平均分: 0.623
-  最高分: 0.891
-  最低分: 0.234
-  中位数: 0.612
-
-每张图像的详细信息:
-
-图像: 0000.jpg
-  质量评分: 0.445
-  拉普拉斯方差: 89.23
-  损伤统计:
-    crack: 7343 px (0.020%)
-```
-
-### 注意事项
-
-1. **阈值调整**：不同相机/场景可能需要不同的阈值，建议先用小批量数据测试
-2. **光照影响**：过曝/欠曝图像可能被误判为模糊，注意控制拍摄条件
-3. **噪声干扰**：高ISO噪声可能影响检测结果，必要时先做降噪处理
-
----
-
-## 示例输出
-
-### 分割结果示例
-
-程序会为每张输入图像生成三视图对比：
-- **左图**: 原始输入图像
-- **中图**: 分割掩码 (彩色编码)
-- **右图**: 叠加可视化 (半透明融合)
-
-### 统计报告
-
-程序会自动输出每个类别的像素统计：
-
-```
-============================================================
-分割结果统计
-============================================================
-
-图像: 0000.jpg
-  background: 36144973 pixels (99.98%)
-  crack: 7343 pixels (0.02%)
-  vegetation: 4 pixels (0.00%)
-
-图像: 0004.jpg
-  background: 36115886 pixels (99.90%)
-  crack: 27930 pixels (0.08%)
-  spalling: 7946 pixels (0.02%)
-  efflorescence: 555 pixels (0.00%)
-```
-
----
-
-## 技术细节
-
-### 分割模型架构
-
-- **骨干网络**: PlainConvUNet (nnU-Net v2)
-- **输入尺寸**: 512×512
-- **下采样层数**: 7层 (128倍下采样)
-- **归一化**: Z-Score标准化
-- **推理配置**:
-  - 滑动窗口步长: 50% 重叠
-  - TTA镜像增强
-  - 高斯加权融合
-
-### 关键技术点
-
-1. **类别加权**: crack (10×) 和 spalling (4×) 有更高权重
-2. **概率膨胀**: 使用Max Pooling保护狭窄裂缝
-3. **批量处理**: 支持多图像自动批处理
-4. **GPU加速**: 自动检测并使用CUDA
-
----
-
-## 数据集
-
-本项目使用 ENSTRECT 官方提供的桥梁检测数据集：
-
-### Bridge B
-- **场景**: 桥梁结构段
-- **损伤类型**: 主要是裂缝 (crack)
-- **图像数量**: 40+ 张多视角图像
-- **分辨率**: ~6000×4000 像素
-
-### Bridge G
-- **场景**: 桥梁结构段
-- **损伤类型**: 剥落 (spalling) + 腐蚀 (corrosion)
-- **图像数量**: 40+ 张多视角图像
-- **分辨率**: ~6000×4000 像素
-
----
-
-## 注意事项
-
-### 1. 模型权重下载
-
-首次运行时会自动从 Google Drive 下载预训练模型 (~465MB)：
-- 下载地址: https://drive.google.com/uc?id=1UeXzpH76GYtZtyn2IjhDvD5Qu3u91YcC
-- 保存位置: `enstrect_lib/src/enstrect/segmentation/checkpoints/`
-
-### 2. CUDA兼容性
-
-- 当前配置: PyTorch 2.5.1 + CUDA 12.4
-- 如遇CUDA版本不匹配，请根据实际环境调整PyTorch版本
-
-### 3. 内存要求
-
-- 高分辨率图像 (6000×4000) 需要较多显存
-- 如显存不足，可在代码中增加图像缩放
-
----
-
-## 进阶：完整3D流程
-
-本项目目前只实现了 **2D图像分割** 部分。完整的 ENSTRECT 流程还包括：
-
-1. **2D分割** → 本项目的核心功能 ✅
-2. **3D点云投影** → 需要 PyTorch3D
-3. **多视图融合** → 概率加权融合
-4. **损伤几何提取** → 中心线/边界多边形
-
-如需运行完整3D pipeline，请安装 PyTorch3D：
+### 示例 1：单张图像智能报告
 
 ```bash
-# Windows安装PyTorch3D (预编译wheel)
-pip install https://miropsota.github.io/torch_packages_builder/pytorch3d/pytorch3d-0.7.8%2Bpt2.5.1-cp310-cp310-win_amd64.whl
+python run_llm_damage_report_api.py \
+    --images-dir enstrect/src/enstrect/assets/bridge_b/segment_test/views \
+    --output-dir output_demo \
+    --max-images 1 \
+    --enable-rag
 ```
 
-然后运行：
-```bash
-python -m enstrect.run \
-    --obj_or_ply_path path/to/mesh.obj \
-    --images_dir path/to/views \
-    --cameras_path path/to/cameras.json \
-    --out_dir path/to/output
+**输出：**
 ```
+output_demo/
+├── reports/
+│   ├── 0000_roi_crack.json       # 结构化 JSON 报告
+│   ├── 0000_roi_crack.md         # Markdown 可读报告
+│   └── 0000_summary.md           # 汇总报告（多 ROI 时）
+├── rois/
+│   └── 0000_crack.png            # 裁剪的 ROI 图像
+├── lora_training/
+│   └── samples.jsonl             # 自动收集的训练数据
+└── pipeline_log.json             # 运行日志
+```
+
+### 示例 2：批量处理
+
+```bash
+python run_llm_damage_report_api.py \
+    --images-dir path/to/your/images \
+    --output-dir output_batch \
+    --enable-rag \
+    --top-k 3
+```
+
+### 示例 3：Python API 调用
+
+```python
+from llm_rag.rag import RAGRetriever
+from llm_rag.prompt import ROICropper, PromptBuilder
+from llm_rag.vlm import QwenVLAPI, OutputParser
+from llm_rag.report import ReportRenderer
+
+# 初始化组件
+retriever = RAGRetriever.from_sample_data(
+    "data/standards/sample_regulations.json",
+    "data/chromadb/"
+)
+vlm = QwenVLAPI()  # 自动读取 .env 中的 API Key
+parser = OutputParser()
+renderer = ReportRenderer()
+
+# 单张图像处理
+# ... (详见完整示例代码)
+```
+
+---
+
+## 📚 RAG 知识库
+
+### 支持的规范文档
+
+| 规范 | 编号 | 内容 |
+|------|------|------|
+| 混凝土结构工程施工质量验收规范 | GB 50204 | 外观质量、尺寸偏差 |
+| 公路桥梁技术状况评定标准 | JTG/T H21 | 裂缝、剥落、锈蚀分级 |
+| 回弹法检测混凝土抗压强度技术规程 | JGJ/T 23 | 强度检测 |
+| 混凝土结构耐久性评定标准 | CECS 259 | 耐久性评估 |
+
+### 添加自定义规范
+
+1. 将 PDF 文件放入 `data/standards/`
+2. 重新构建知识库：
+
+```bash
+python -m llm_rag.rag.build --pdf-dir data/standards/ --db-path data/chromadb/
+```
+
+---
+
+## 💡 进阶功能
+
+### 1. LoRA 微调数据收集
+
+系统会自动保存每次推理的输入-输出对，用于后续微调：
+
+```bash
+# 收集一定量的数据后，导出训练集
+cd llm_rag/utils/
+python -c "from data_collector import TrainingDataCollector; c = TrainingDataCollector(); c.export_training_data('output_lora', 'sharegpt')"
+```
+
+### 2. 自定义 Prompt 模板
+
+编辑 `llm_rag/prompt/builder.py` 中的 `DAMAGE_TEMPLATES`，添加特定损伤类型的评估指引。
+
+### 3. 调整 RAG 检索参数
+
+```python
+# 修改检索条数
+retriever = RAGRetriever(vector_store, top_k=5)
+
+# 按损伤类型检索
+results = retriever.retrieve_by_damage_type("crack", severity_hint="severe")
+```
+
+---
+
+## 🔧 环境要求
+
+### 硬件要求
+
+| 模式 | GPU | 显存 | 内存 |
+|------|-----|------|------|
+| **API 模式** | 不需要 | 不需要 | 8GB+ |
+| **本地 4-bit** | RTX 3060+ | 8GB+ | 16GB+ |
+| **本地 FP16** | RTX 4090/A100 | 16GB+ | 32GB+ |
+
+### 软件环境
+
+```
+Python >= 3.10
+PyTorch >= 2.5.0
+CUDA >= 12.4 (本地模型模式)
+```
+
+### 依赖安装
+
+```bash
+# 基础依赖
+pip install torch torchvision numpy pillow tqdm
+
+# LLM+RAG 依赖
+pip install transformers qwen-vl-utils accelerate
+pip install chromadb sentence-transformers pdfplumber
+
+# 可选：OpenAI SDK（API 调用更稳定）
+pip install openai
+
+# 可选：bitsandbytes（本地 4-bit 量化）
+pip install bitsandbytes
+```
+
+---
+
+## 📝 详细文档
+
+- [LLM辅助智能识别可行性报告](LLM辅助智能识别可行性报告.md) - 技术调研与方案设计
+- [ENSTRECT_Workflow.md](ENSTRECT_Workflow.md) - ENSTRECT 原始工作流说明
+- [ENSTRECT_损伤分割技术详解.md](ENSTRECT_损伤分割技术详解.md) - 分割模型技术细节
 
 ---
 
@@ -436,6 +388,13 @@ python -m enstrect.run \
   journal={Nature methods},
   year={2021}
 }
+
+@article{qwen2.5vl2024,
+  title={Qwen2.5-VL: Advanced Multimodal Language Model},
+  author={Qwen Team},
+  journal={arXiv preprint},
+  year={2024}
+}
 ```
 
 ---
@@ -452,8 +411,9 @@ python -m enstrect.run \
 
 - [ENSTRECT](https://github.com/ben-z-original/enstrect) - 原始项目作者 Christian Benz
 - [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) - 分割模型框架
-- [PyTorch3D](https://github.com/facebookresearch/pytorch3d) - 3D数据处理
+- [Qwen2.5-VL](https://github.com/QwenLM/Qwen2.5-VL) - 多模态大模型
+- [阿里云百炼](https://bailian.console.aliyun.com/) - 模型 API 服务
 
 ---
 
-> 💡 **提示**: 本项目仅用于学习和研究目的。如需商业使用，请参考原始 ENSTRECT 项目的许可证要求。
+> 💡 **提示**: 本项目仅用于学习和研究目的。API 使用请遵守阿里云百炼的服务条款。
