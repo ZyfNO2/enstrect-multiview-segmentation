@@ -52,3 +52,23 @@ data/lora_training/
 *.pt
 *.pth
 models/
+
+# Qwen2.5-VL model (downloaded separately)
+Qwen2.5-VL-*/
+
+# Temporary directories
+nnunet_temp/
+pytorch3d/
+
+# Large data files
+*.pkl
+*.pth
+*.ckpt
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
